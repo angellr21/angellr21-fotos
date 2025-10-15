@@ -556,7 +556,9 @@ function initApp() {
 
 // --- INICIO DEL BLOQUE SWUP ---
 
-const options = {};
+const options = {
+    containers: ['#swupMain', '#swupMenu'],
+};
 const swup = new Swup(options);
 
 document.addEventListener('DOMContentLoaded', initApp);
