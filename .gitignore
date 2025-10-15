@@ -1,0 +1,7 @@
+# Ignorar carpetas de contenido de usuario
+/fotos/
+/descargas/
+
+# Ignorar archivos del sistema operativo
+.DS_Store
+Thumbs.db
