@@ -447,64 +447,11 @@
                     </div>
                 </section>
                 <!-- blog -->
-                <section>
-                    <div class="container mil-p-120-60">
-                        <div class="row align-items-center mil-mb-30">
-                            <div class="col-lg-6 mil-mb-30">
-                                <h3 class="mil-up">Historias y consejos para tu evento</h3>
-                            </div>
-                            <div class="col-lg-6 mil-mb-30">
-                                <div class="mil-adaptive-right mil-up">
-                                    <a href="eventos.html" class="mil-link mil-dark mil-arrow-place">
-                                        <span>Ver más experiencias</span>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-lg-6">
-
-                                <a href="evento-plantilla.html" class="mil-blog-card mil-mb-60">
-                                    <div class="mil-cover-frame mil-up">
-                                        <img src="img/blog/1.jpg" alt="Cobertura de boda">
-                                    </div>
-                                    <div class="mil-post-descr">
-                                        <div class="mil-labels mil-up mil-mb-30">
-                                            <div class="mil-label mil-upper mil-accent">BODA</div>
-                                            <div class="mil-label mil-upper">abril 12 2024</div>
-                                        </div>
-                                        <h4 class="mil-up mil-mb-30">Guía para disfrutar tu boda mientras registramos cada momento</h4>
-                                        <p class="mil-post-text mil-up mil-mb-30">Tips para organizar tu cronograma, coordinar con proveedores y asegurarte de que la cobertura fotográfica fluya de manera natural.</p>
-                                        <div class="mil-link mil-dark mil-arrow-place mil-up">
-                                            <span>Leer historia completa</span>
-                                        </div>
-                                    </div>
-                                </a>
-
-                            </div>
-                            <div class="col-lg-6">
-
-                                <a href="eventos.html" class="mil-blog-card mil-mb-60">
-                                    <div class="mil-cover-frame mil-up">
-                                        <img src="img/blog/2.jpg" alt="Evento corporativo">
-                                    </div>
-                                    <div class="mil-post-descr">
-                                        <div class="mil-labels mil-up mil-mb-30">
-                                            <div class="mil-label mil-upper mil-accent">CORPORATIVO</div>
-                                            <div class="mil-label mil-upper">enero 18 2024</div>
-                                        </div>
-                                        <h4 class="mil-up mil-mb-30">Cómo aprovechar tus fotografías corporativas después del evento</h4>
-                                        <p class="mil-post-text mil-up mil-mb-30">Recomendaciones para activar campañas internas, redes sociales y reportes ejecutivos con imágenes frescas y coherentes.</p>
-                                        <div class="mil-link mil-dark mil-arrow-place mil-up">
-                                            <span>Explorar recomendaciones</span>
-                                        </div>
-                                    </div>
-                                </a>
-
-                            </div>
-                        </div>
+                <div class="container mil-p-120-60">
+                    <div class="row" id="events-container">
+                        <!-- Los eventos se cargarán aquí con JavaScript -->
                     </div>
-                </section>
+                </div>
                 <!-- blog end -->
 
                 <!-- footer -->
@@ -739,6 +686,47 @@
     <script src="js/plugins/ScrollTo.min.js"></script>
     <!-- ashley js -->
     <script src="js/main.js"></script>
+
+    <script>
+        function inicializarEventos() {
+            const eventsContainer = document.getElementById('events-container');
+            if (!eventsContainer) return;
+
+            fetch('events.json?t=' + Date.now())
+                .then(response => response.json())
+                .then(events => {
+                    eventsContainer.innerHTML = '';
+                    if (events.length === 0) {
+                        eventsContainer.innerHTML = '<p style="text-align: center; width: 100%;">No hay eventos publicados en este momento.</p>';
+                        return;
+                    }
+                    events.forEach(event => {
+                        const eventEl = document.createElement('div');
+                        eventEl.className = 'col-lg-6';
+                        eventEl.innerHTML = `
+                        <a href="evento-plantilla.html?id=${event.id}" class="mil-blog-card mil-mb-60">
+                            <div class="mil-cover-frame mil-up"><img src="${event.portada}" alt="${event.titulo}"></div>
+                            <div class="mil-post-descr">
+                                <div class="mil-labels mil-up mil-mb-30">
+                                    <div class="mil-label mil-upper mil-accent">EVENTO</div>
+                                    <div class="mil-label mil-upper">${event.fecha}</div>
+                                </div>
+                                <h4 class="mil-up mil-mb-30">${event.titulo}</h4>
+                                <p class="mil-post-text mil-up mil-mb-30">${event.descripcion}</p>
+                                <div class="mil-link mil-dark mil-arrow-place mil-up"><span>Ver galería</span></div>
+                            </div>
+                        </a>`;
+                        eventsContainer.appendChild(eventEl);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error al cargar eventos:', error);
+                    eventsContainer.innerHTML = '<p style="text-align: center; width: 100%;">No se pudieron cargar los eventos.</p>';
+                });
+        }
+        document.addEventListener('DOMContentLoaded', inicializarEventos);
+        document.addEventListener('swup:contentReplaced', inicializarEventos);
+    </script>
 
 </body>
 
