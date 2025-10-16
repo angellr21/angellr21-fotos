@@ -518,7 +518,7 @@
 
                                             <h6 class="mil-muted mil-up mil-mb-30">Cobertura</h6>
 
-                                            <p class="mil-light-soft mil-up">Cobertura fotográfica en todo el occidente de Venezuela <span class="mil-no-wrap">WhatsApp +58 424 686 5535</span></p>
+                                            <p class="mil-light-soft mil-up">Cobertura fotográfica en todo el occidente de Venezuela <span class="mil-no-wrap"><a href="https://wa.me/584246865535" class="mil-light-soft" target="_blank" rel="noopener">WhatsApp +58 424 686 5535</a></span></p>
 
                                             <div class="mil-up">
                                                 <h6 class="mil-muted mil-mb-10">Acceso Privado</h6>
@@ -748,7 +748,7 @@
             const updateSelectedState = () => {
                 if (!downloadSelectedBtn) return;
                 const enabled = Boolean(lastOpenedImage) && isVerified;
-                downloadSelectedBtn.disabled = false;
+                downloadSelectedBtn.disabled = !enabled;
                 downloadSelectedBtn.classList.toggle('mil-disabled', !enabled);
                 if (enabled) {
                     downloadSelectedBtn.removeAttribute('aria-disabled');
@@ -870,8 +870,16 @@
             }
 
             fetch('events.json?t=' + Date.now())
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('No se pudo cargar la información del evento.');
+                    }
+                    return response.json();
+                })
                 .then(events => {
+                    if (!Array.isArray(events)) {
+                        throw new Error('El formato de eventos es inválido.');
+                    }
                     const event = events.find(item => item.id === eventId);
                     if (!event) {
                         throw new Error('Evento no encontrado');
@@ -894,13 +902,20 @@
                         refreshDownloadAllState();
                     }
 
-                    if (!event.directorio) {
+                    const galleryDirectory = String(event.directorio || '').replace(/^fotos\//, '').trim();
+                    if (!galleryDirectory) {
                         throw new Error('Directorio de galería no definido.');
                     }
 
-                    return fetch(`scripts/listar_archivos.php?dir=${event.directorio}`);
+                    const encodedDir = encodeURIComponent(galleryDirectory);
+                    return fetch(`scripts/listar_archivos.php?dir=${encodedDir}`);
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('No se pudo obtener la galería de imágenes.');
+                    }
+                    return response.json();
+                })
                 .then(images => {
                     if (!Array.isArray(images)) {
                         throw new Error('Formato de galería no válido.');
