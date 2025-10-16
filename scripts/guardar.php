@@ -104,7 +104,7 @@ try {
         'lugar' => $event_data['lugar'] ?? '',
         'descripcion' => $event_data['descripcion'] ?? '',
         'portada' => $portada_path,
-        'directorio' => 'fotos/' . $event_id
+        'directorio' => $event_id
     ];
 
     // Buscar si el evento ya existe para actualizarlo, si no, añadirlo

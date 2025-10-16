@@ -116,7 +116,11 @@
             async function loadEvents() {
                 try {
                     const response = await fetch('events.json?t=' + Date.now());
-                    events = await response.json();
+                    if (!response.ok) {
+                        throw new Error('No se pudo obtener el listado de eventos.');
+                    }
+                    const data = await response.json();
+                    events = Array.isArray(data) ? data : [];
                     renderTable(events);
                 } catch (e) {
                     console.error("No se pudo cargar events.json, se creará uno nuevo.", e);
@@ -167,6 +171,9 @@
                         method: 'POST',
                         body: formData
                     });
+                    if (!response.ok) {
+                        throw new Error('No se pudo eliminar el evento.');
+                    }
                     const result = await response.json();
                     if (result.error) throw new Error(result.error);
                     showFeedback('Evento eliminado correctamente.', 'success');
@@ -223,9 +230,12 @@
                         method: 'POST',
                         body: formData
                     });
+                    if (!response.ok) {
+                        throw new Error('No se pudo guardar el evento.');
+                    }
                     const result = await response.json();
                     if (result.error) throw new Error(result.error);
-                    
+
                     showFeedback(result.message, 'success');
                     loadEvents();
                     eventForm.reset();

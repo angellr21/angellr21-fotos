@@ -3,13 +3,29 @@
 header('Content-Type: application/json');
 
 $base_dir = '../fotos/';
-$directory = $_GET['dir'] ?? '';
+$directory = isset($_GET['dir']) ? trim($_GET['dir']) : '';
+$directory = str_replace('\\', '/', $directory);
+if (strpos($directory, 'fotos/') === 0) {
+    $directory = substr($directory, strlen('fotos/'));
+}
+$directory = ltrim($directory, '/');
 
-// Medida de seguridad: Limpiar la ruta para evitar directory traversal
-$safe_path = realpath($base_dir . $directory);
+if ($directory === '') {
+    echo json_encode([]);
+    exit;
+}
+
+$target_path = $base_dir . $directory;
 $base_path = realpath($base_dir);
 
-if ($safe_path === false || strpos($safe_path, $base_path) !== 0) {
+if (!is_dir($target_path)) {
+    echo json_encode([]);
+    exit;
+}
+
+$safe_path = realpath($target_path);
+
+if ($safe_path === false || $base_path === false || strpos($safe_path, $base_path) !== 0) {
     http_response_code(400);
     echo json_encode(['error' => 'Ruta de directorio no válida.']);
     exit;
