@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Eventos | Ángel López</title>
+    <style>
+        :root { /* Estilos del panel */ }
+        body { margin: 0; background: #f5f5f7; color: #1f1f29; font-family: sans-serif; }
+        .admin-shell { padding: 40px 20px; }
+        .admin-card { max-width: 1100px; margin: auto; background: #fff; border-radius: 18px; box-shadow: 0 20px 60px rgba(0,0,0,0.08); padding: 40px; }
+        h1, h2 { margin: 0 0 10px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 14px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f9f9f9; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 16px; }
+        label { display: flex; flex-direction: column; gap: 6px; }
+        input, textarea, button { font: inherit; padding: 10px; border-radius: 8px; border: 1px solid #ddd; }
+        button { cursor: pointer; }
+        .primary { background: #ff6f61; color: white; border-color: #ff6f61; }
+        .danger { background: #ff4d4f; color: white; border-color: #ff4d4f; }
+        #login-screen { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 100; }
+        .login-card { background: white; padding: 32px; border-radius: 16px; text-align: center; }
+        #gallery-preview { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-top: 10px; }
+        #gallery-preview img { width: 100%; height: 100px; object-fit: cover; border-radius: 8px; cursor: pointer; border: 3px solid transparent; }
+        #gallery-preview img.selected { border-color: #ff6f61; }
+        .feedback { padding: 12px; border-radius: 8px; margin-bottom: 16px; }
+        .feedback.success { background: #e8f5e9; color: #2e7d32; }
+        .feedback.error { background: #ffebee; color: #c62828; }
+    </style>
+</head>
+<body>
+    <div id="login-screen">
+        <div class="login-card">
+            <h2>Acceso Privado</h2>
+            <form id="login-form">
+                <input type="password" id="login-password" placeholder="Contraseña" required>
+                <button type="submit" class="primary">Entrar</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="admin-shell" id="admin-app" hidden>
+        <div class="admin-card">
+            <h1>Panel de eventos</h1>
+            <div id="panel-feedback" class="feedback" style="display: none;"></div>
+            <h2>Eventos Actuales</h2>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr><th>ID</th><th>Título</th><th>Fecha</th><th>Acciones</th></tr>
+                    </thead>
+                    <tbody id="events-table"></tbody>
+                </table>
+            </div>
+
+            <h2 style="margin-top: 40px;">Añadir o Editar Evento</h2>
+            <form id="event-form">
+                <div class="form-grid">
+                    <label>ID (único, sin espacios) <input type="text" name="id" required></label>
+                    <label>Título <input type="text" name="titulo" required></label>
+                    <label>Fecha <input type="date" name="fecha" required></label>
+                    <label>Lugar <input type="text" name="lugar" required></label>
+                </div>
+                <label>Descripción <textarea name="descripcion" required></textarea></label>
+                <br>
+                <label>Fotos de la Galería (selecciona una para la portada) <input type="file" name="galeria_imagenes" multiple accept="image/*"></label>
+                <div id="gallery-preview"></div>
+                <input type="hidden" name="portada">
+                
+                <div style="margin-top: 20px;">
+                    <button type="submit" class="primary">Guardar Evento</button>
+                    <button type="button" id="cancel-edit" style="display: none;">Cancelar Edición</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- CONFIGURACIÓN ---
+            const PASSWORD = 'angellr21-admin';
+
+            // --- ELEMENTOS DEL DOM ---
+            const loginScreen = document.getElementById('login-screen');
+            const loginForm = document.getElementById('login-form');
+            const adminApp = document.getElementById('admin-app');
+            const eventForm = document.getElementById('event-form');
+            const eventsTable = document.getElementById('events-table');
+            const galleryPreview = document.getElementById('gallery-preview');
+            const fileInput = eventForm.querySelector('input[type="file"]');
+            const portadaInput = eventForm.querySelector('input[name="portada"]');
+            const feedbackEl = document.getElementById('panel-feedback');
+            let editId = null;
+            let events = [];
+
+            // --- LÓGICA DE LOGIN ---
+            loginForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (document.getElementById('login-password').value === PASSWORD) {
+                    loginScreen.style.display = 'none';
+                    adminApp.hidden = false;
+                    loadEvents();
+                } else {
+                    alert('Contraseña incorrecta.');
+                }
+            });
+
+            // --- LÓGICA PRINCIPAL ---
+            function showFeedback(message, type) {
+                feedbackEl.textContent = message;
+                feedbackEl.className = `feedback ${type}`;
+                feedbackEl.style.display = 'block';
+            }
+
+            async function loadEvents() {
+                try {
+                    const response = await fetch('events.json?t=' + Date.now());
+                    events = await response.json();
+                    renderTable(events);
+                } catch (e) {
+                    console.error("No se pudo cargar events.json, se creará uno nuevo.", e);
+                    events = [];
+                    renderTable(events);
+                }
+            }
+
+            function renderTable(events) {
+                eventsTable.innerHTML = '';
+                events.forEach(event => {
+                    const row = eventsTable.insertRow();
+                    row.innerHTML = `
+                        <td>${event.id}</td>
+                        <td>${event.titulo}</td>
+                        <td>${event.fecha}</td>
+                        <td>
+                            <button onclick="editEvent('${event.id}')">Editar</button>
+                            <button class="danger" onclick="deleteEvent('${event.id}')">Eliminar</button>
+                        </td>
+                    `;
+                });
+            }
+            
+            window.editEvent = function(id) {
+                const event = events.find(e => e.id === id);
+                if (!event) return;
+                editId = id;
+                eventForm.querySelector('[name="id"]').value = event.id;
+                eventForm.querySelector('[name="id"]').readOnly = true;
+                eventForm.querySelector('[name="titulo"]').value = event.titulo;
+                eventForm.querySelector('[name="fecha"]').value = event.fecha;
+                eventForm.querySelector('[name="lugar"]').value = event.lugar;
+                eventForm.querySelector('[name="descripcion"]').value = event.descripcion;
+                galleryPreview.innerHTML = `<p>Para cambiar las fotos, simplemente selecciona nuevos archivos. La portada actual es: ${event.portada}</p>`;
+                portadaInput.value = event.portada;
+                document.getElementById('cancel-edit').style.display = 'inline-block';
+            }
+
+            window.deleteEvent = async function(id) {
+                if (!confirm('¿Seguro que deseas eliminar este evento?')) return;
+                try {
+                    const formData = new FormData();
+                    formData.append('id', id);
+                    formData.append('delete', 'true');
+
+                    const response = await fetch('scripts/guardar.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const result = await response.json();
+                    if (result.error) throw new Error(result.error);
+                    showFeedback('Evento eliminado correctamente.', 'success');
+                    loadEvents();
+                } catch (error) {
+                    showFeedback(`Error: ${error.message}`, 'error');
+                }
+            }
+
+            document.getElementById('cancel-edit').addEventListener('click', () => {
+                editId = null;
+                eventForm.reset();
+                galleryPreview.innerHTML = '';
+                eventForm.querySelector('[name="id"]').readOnly = false;
+                document.getElementById('cancel-edit').style.display = 'none';
+            });
+
+            fileInput.addEventListener('change', () => {
+                galleryPreview.innerHTML = '';
+                portadaInput.value = '';
+                const files = Array.from(fileInput.files);
+                if (files.length > 0) {
+                    portadaInput.value = files[0].name; // Selecciona la primera como portada por defecto
+                }
+                files.forEach((file, index) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.dataset.filename = file.name;
+                        if (index === 0) img.classList.add('selected');
+                        img.onclick = () => {
+                            galleryPreview.querySelectorAll('img').forEach(el => el.classList.remove('selected'));
+                            img.classList.add('selected');
+                            portadaInput.value = file.name;
+                        };
+                        galleryPreview.appendChild(img);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            });
+
+            eventForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(eventForm);
+                if (editId) {
+                    formData.set('id', editId);
+                }
+
+                showFeedback('Guardando evento y subiendo fotos...', 'success');
+
+                try {
+                    const response = await fetch('scripts/guardar.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const result = await response.json();
+                    if (result.error) throw new Error(result.error);
+                    
+                    showFeedback(result.message, 'success');
+                    loadEvents();
+                    eventForm.reset();
+                    galleryPreview.innerHTML = '';
+                    editId = null;
+                    eventForm.querySelector('[name="id"]').readOnly = false;
+                    document.getElementById('cancel-edit').style.display = 'none';
+
+                } catch (error) {
+                    showFeedback(`Error: ${error.message}`, 'error');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
