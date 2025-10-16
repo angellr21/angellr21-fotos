@@ -191,11 +191,16 @@
                         <div class="container">
                             <div class="mil-banner-content mil-up">
 
-                                <h1 class="mil-muted mil-mb-60">Revive <span class="mil-thin">la boda</span><br> de <span class="mil-thin">Mariana &amp; Luis</span></h1>
+                                <h1 class="mil-muted mil-mb-60" id="evento-titulo">...</h1>
                                 <div class="row">
                                     <div class="col-md-7 col-lg-5">
 
-                                        <p class="mil-light-soft mil-mb-60">Un recorrido íntimo por una celebración llena de detalles en San Miguel de Allende. Desde los preparativos hasta el último baile, te muestro cómo documento cada instante.</p>
+                                        <p class="mil-light-soft mil-mb-60" id="evento-descripcion">...</p>
+                                        <div class="mil-up mil-mb-60">
+                                            <p class="mil-light-soft mil-mb-10">Evento: <span class="mil-dark" id="evento-nombre">...</span></p>
+                                            <p class="mil-light-soft mil-mb-10">Fecha: <span class="mil-dark" id="evento-fecha">...</span></p>
+                                            <p class="mil-light-soft">Lugar: <span class="mil-dark" id="evento-lugar">...</span></p>
+                                        </div>
 
                                     </div>
                                 </div>
@@ -300,23 +305,8 @@
                                 <a href="contact.html" class="mil-link mil-dark mil-arrow-place"><span>Solicitar galería completa</span></a>
                             </div>
                         </div>
-                        <div class="row">
-                            <div class="col-md-4 mil-mb-30">
-                                <div class="mil-up mil-img-frame" style="padding-bottom: 130%;">
-                                    <img src="img/works/2.jpg" alt="Ceremonia" class="mil-scale" data-value-1="1" data-value-2="1.05">
-                                </div>
-                            </div>
-                            <div class="col-md-4 mil-mb-30">
-                                <div class="mil-up mil-img-frame" style="padding-bottom: 130%;">
-                                    <img src="img/works/3.jpg" alt="Retrato de pareja" class="mil-scale" data-value-1="1" data-value-2="1.05">
-                                </div>
-                            </div>
-                            <div class="col-md-4 mil-mb-30">
-                                <div class="mil-up mil-img-frame" style="padding-bottom: 130%;">
-                                    <img src="img/works/4.jpg" alt="Decoración" class="mil-scale" data-value-1="1" data-value-2="1.05">
-                                </div>
-                            </div>
-                        </div>
+                        <div class="row" id="galeria-container"></div>
+                        <div class="mil-center mil-up mil-mt-60">Cargando galería...</div>
                     </div>
                 </section>
                 <!-- momentos -->
@@ -677,6 +667,64 @@
     <script src="js/plugins/ScrollTo.min.js"></script>
     <!-- ashley js -->
     <script src="js/main.js"></script>
+
+    <script>
+        function inicializarGaleria() {
+            const params = new URLSearchParams(window.location.search);
+            const eventId = params.get('id');
+            const feedbackEl = document.querySelector('#galeria-container + .mil-center');
+
+            if (!eventId) {
+                if (feedbackEl) feedbackEl.textContent = 'ID de evento no especificado.';
+                return;
+            }
+
+            fetch('events.json?t=' + Date.now())
+                .then(response => response.json())
+                .then(events => {
+                    const event = events.find(e => e.id === eventId);
+                    if (!event) throw new Error('Evento no encontrado');
+
+                    document.getElementById('evento-titulo').textContent = event.titulo;
+                    document.getElementById('evento-nombre').textContent = event.titulo;
+                    document.getElementById('evento-fecha').textContent = event.fecha;
+                    document.getElementById('evento-lugar').textContent = event.lugar;
+                    document.getElementById('evento-descripcion').textContent = event.descripcion;
+
+                    if (!event.directorio) throw new Error('Directorio de galería no definido.');
+                    return fetch(`scripts/listar_archivos.php?dir=${event.directorio}`);
+                })
+                .then(response => response.json())
+                .then(images => {
+                    const galeriaContainer = document.getElementById('galeria-container');
+                    galeriaContainer.innerHTML = '';
+                    if (feedbackEl) feedbackEl.style.display = 'none';
+
+                    images.forEach(imagePath => {
+                        const col = document.createElement('div');
+                        col.className = 'col-sm-6 col-lg-4';
+                        col.innerHTML = `
+                        <div class="mil-image-frame mil-square mil-up mil-mb-30">
+                            <img src="${imagePath}" alt="Foto del evento">
+                            <a data-fancybox="gallery" href="${imagePath}" class="mil-zoom-btn">
+                                <img src="img/icons/zoom.svg" alt="zoom">
+                            </a>
+                        </div>`;
+                        galeriaContainer.appendChild(col);
+                    });
+
+                    if (window.Fancybox) {
+                        Fancybox.bind("[data-fancybox='gallery']");
+                    }
+                })
+                .catch(error => {
+                    console.error('Error al cargar la galería:', error);
+                    if (feedbackEl) feedbackEl.textContent = 'No se pudo cargar la galería: ' + error.message;
+                });
+        }
+        document.addEventListener('DOMContentLoaded', inicializarGaleria);
+        document.addEventListener('swup:contentReplaced', inicializarGaleria);
+    </script>
 
 </body>
 
